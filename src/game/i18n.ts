@@ -76,6 +76,8 @@ const dict = {
   tipChain: { uk: "Ланцюг бомб дає більше очок", en: "Chain blasts score more" },
   comingSoon: { uk: "Незабаром", en: "Soon" },
   multiplayer: { uk: "Мультиплеєр", en: "Multiplayer" },
+  getApp: { uk: "Завантажити Android", en: "Download Android" },
+  getAppHint: { uk: "APK для телефону — грай поза прев’ю", en: "Phone APK — play outside the preview" },
   confirmExit: { uk: "Вийти в меню? Прогрес матчу зникне.", en: "Quit to menu? This match will be lost." },
   cancel: { uk: "Скасувати", en: "Cancel" },
   quit: { uk: "Вийти", en: "Quit" },

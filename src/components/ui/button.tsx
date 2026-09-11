@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { ButtonHTMLAttributes, MouseEvent, PointerEvent, SyntheticEvent } from "react";
+import type { ButtonHTMLAttributes, MouseEvent, PointerEvent, SyntheticEvent, TouchEvent } from "react";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
@@ -22,9 +22,9 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: Size;
 };
 
-/** Dedupe pointerdown + click so iframe taps fire once, not twice. */
+/** Dedupe pointerdown + touchstart + click so iframe taps fire once. */
 export function armPress(el: HTMLElement): boolean {
-  const now = performance.now();
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
   if (now - Number(el.dataset.pressedAt ?? 0) < 380) return false;
   el.dataset.pressedAt = String(now);
   return true;
@@ -34,6 +34,10 @@ export function bindPress(fn: () => void) {
   return {
     onPointerDown: (e: PointerEvent<HTMLElement>) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (!armPress(e.currentTarget)) return;
+      fn();
+    },
+    onTouchStart: (e: TouchEvent<HTMLElement>) => {
       if (!armPress(e.currentTarget)) return;
       fn();
     },
@@ -51,6 +55,7 @@ export function Button({
   type = "button",
   onClick,
   onPointerDown,
+  onTouchStart,
   ...props
 }: Props) {
   const fire = (e: SyntheticEvent<HTMLButtonElement>) => {
@@ -73,6 +78,11 @@ export function Button({
         onPointerDown?.(e);
         if (e.defaultPrevented) return;
         if (e.pointerType === "mouse" && e.button !== 0) return;
+        fire(e);
+      }}
+      onTouchStart={(e) => {
+        onTouchStart?.(e);
+        if (e.defaultPrevented) return;
         fire(e);
       }}
       onClick={(e) => fire(e)}

@@ -3,35 +3,51 @@ import { SKINS } from "./balance";
 
 export type Sheets = {
   player: Record<SkinId, HTMLCanvasElement | HTMLImageElement>;
-  slime: HTMLImageElement;
-  beetle: HTMLImageElement;
-  ghost: HTMLImageElement;
-  bomb: HTMLImageElement;
-  explosion: HTMLImageElement;
-  death: HTMLImageElement;
-  powerups: HTMLImageElement;
-  crate: HTMLImageElement;
-  wall: HTMLImageElement;
-  floors: { city: HTMLImageElement; dungeon: HTMLImageElement; neon: HTMLImageElement };
+  slime: HTMLImageElement | HTMLCanvasElement;
+  beetle: HTMLImageElement | HTMLCanvasElement;
+  ghost: HTMLImageElement | HTMLCanvasElement;
+  bomb: HTMLImageElement | HTMLCanvasElement;
+  explosion: HTMLImageElement | HTMLCanvasElement;
+  death: HTMLImageElement | HTMLCanvasElement;
+  powerups: HTMLImageElement | HTMLCanvasElement;
+  crate: HTMLImageElement | HTMLCanvasElement;
+  wall: HTMLImageElement | HTMLCanvasElement;
+  floors: { city: HTMLImageElement | HTMLCanvasElement; dungeon: HTMLImageElement | HTMLCanvasElement; neon: HTMLImageElement | HTMLCanvasElement };
 };
 
 function assetUrl(path: string): string {
-  const base = import.meta.env.BASE_URL ?? "/";
+  const base = import.meta.env.BASE_URL ?? "./";
   const prefix = base.endsWith("/") ? base : `${base}/`;
   return `${prefix}${path.replace(/^\//, "")}`;
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
+function fallbackSheet(color: string, w = 256, h = 256): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(255,255,255,.18)";
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      if ((i + j) % 2 === 0) ctx.fillRect((w / 4) * i, (h / 4) * j, w / 4, h / 4);
+    }
+  }
+  return c;
+}
+
+function loadImage(src: string): Promise<HTMLImageElement | HTMLCanvasElement> {
+  return new Promise((resolve) => {
     const img = new Image();
     if (/^https?:/i.test(src)) img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("fail " + src));
+    img.onerror = () => resolve(fallbackSheet("#3d4654"));
     img.src = src;
   });
 }
 
-function tint(img: HTMLImageElement, hue: number): HTMLCanvasElement {
+function tint(img: HTMLImageElement | HTMLCanvasElement, hue: number): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = img.width;
   c.height = img.height;

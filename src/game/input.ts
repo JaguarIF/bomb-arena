@@ -24,6 +24,15 @@ function radial(x: number, y: number, dz = 0.18) {
   return { x: x * scale, y: y * scale };
 }
 
+function roleOf(target: EventTarget | null): "stick" | "bomb" | "det" | null {
+  const el = target instanceof Element ? target : null;
+  return (el?.closest("[data-role]")?.getAttribute("data-role") as
+    | "stick"
+    | "bomb"
+    | "det"
+    | null) ?? null;
+}
+
 export class Input {
   keys = new Set<string>();
   injected: Set<string> | null = null;
@@ -36,8 +45,7 @@ export class Input {
   private prevPause = false;
   private pointers = new Map<number, { x: number; y: number; role: "stick" | "bomb" | "det" }>();
   private stickOrigin: { x: number; y: number } | null = null;
-  bombRect: DOMRect | null = null;
-  detRect: DOMRect | null = null;
+  private ptrActive = false;
   canvas: HTMLElement | null = null;
 
   attach(el: HTMLElement) {
@@ -46,10 +54,14 @@ export class Input {
     window.addEventListener("keyup", this.onKeyUp);
     window.addEventListener("blur", this.clear);
     document.addEventListener("visibilitychange", this.onVis);
-    el.addEventListener("pointerdown", this.onPtrDown);
-    el.addEventListener("pointermove", this.onPtrMove);
-    el.addEventListener("pointerup", this.onPtrUp);
-    el.addEventListener("pointercancel", this.onPtrUp);
+    el.addEventListener("pointerdown", this.onPtrDown, { passive: false });
+    window.addEventListener("pointermove", this.onPtrMove, { passive: false });
+    window.addEventListener("pointerup", this.onPtrUp);
+    window.addEventListener("pointercancel", this.onPtrUp);
+    el.addEventListener("touchstart", this.onTouchStart, { passive: false });
+    window.addEventListener("touchmove", this.onTouchMove, { passive: false });
+    window.addEventListener("touchend", this.onTouchEnd);
+    window.addEventListener("touchcancel", this.onTouchEnd);
   }
 
   detach(el: HTMLElement) {
@@ -58,9 +70,13 @@ export class Input {
     window.removeEventListener("blur", this.clear);
     document.removeEventListener("visibilitychange", this.onVis);
     el.removeEventListener("pointerdown", this.onPtrDown);
-    el.removeEventListener("pointermove", this.onPtrMove);
-    el.removeEventListener("pointerup", this.onPtrUp);
-    el.removeEventListener("pointercancel", this.onPtrUp);
+    window.removeEventListener("pointermove", this.onPtrMove);
+    window.removeEventListener("pointerup", this.onPtrUp);
+    window.removeEventListener("pointercancel", this.onPtrUp);
+    el.removeEventListener("touchstart", this.onTouchStart);
+    window.removeEventListener("touchmove", this.onTouchMove);
+    window.removeEventListener("touchend", this.onTouchEnd);
+    window.removeEventListener("touchcancel", this.onTouchEnd);
     this.clear();
   }
 
@@ -85,38 +101,85 @@ export class Input {
     this.stickOrigin = null;
     this.bombHeld = false;
     this.detonateHeld = false;
+    this.ptrActive = false;
   };
 
-  private onPtrDown = (e: PointerEvent) => {
-    const t = e.target as HTMLElement;
-    const role = t.closest("[data-role]")?.getAttribute("data-role") as
-      | "stick"
-      | "bomb"
-      | "det"
-      | null;
-    if (!role) return;
-    e.preventDefault();
-    t.setPointerCapture?.(e.pointerId);
-    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, role });
-    if (role === "stick") this.stickOrigin = { x: e.clientX, y: e.clientY };
+  private begin(id: number, x: number, y: number, role: "stick" | "bomb" | "det", target?: Element | null) {
+    this.pointers.set(id, { x, y, role });
+    if (role === "stick") this.stickOrigin = { x, y };
     if (role === "bomb") this.bombHeld = true;
     if (role === "det") this.detonateHeld = true;
+    if (target && "setPointerCapture" in target && id < 10000) {
+      try {
+        (target as HTMLElement).setPointerCapture?.(id);
+      } catch {
+        /* older webview */
+      }
+    }
+  }
+
+  private onPtrDown = (e: PointerEvent) => {
+    const role = roleOf(e.target);
+    if (!role) return;
+    this.ptrActive = true;
+    e.preventDefault();
+    this.begin(e.pointerId, e.clientX, e.clientY, role, e.target as Element);
   };
 
   private onPtrMove = (e: PointerEvent) => {
     const p = this.pointers.get(e.pointerId);
     if (!p || p.role !== "stick" || !this.stickOrigin) return;
+    e.preventDefault();
     const dx = e.clientX - this.stickOrigin.x;
     const dy = e.clientY - this.stickOrigin.y;
-    const max = 46;
-    const clamped = radial(dx / max, dy / max, 0.12);
+    const clamped = radial(dx / 52, dy / 52, 0.12);
     this.stickX = clamped.x;
     this.stickY = clamped.y;
   };
 
   private onPtrUp = (e: PointerEvent) => {
-    const p = this.pointers.get(e.pointerId);
-    this.pointers.delete(e.pointerId);
+    this.release(e.pointerId);
+    this.ptrActive = this.pointers.size > 0;
+  };
+
+  private onTouchStart = (e: TouchEvent) => {
+    if (this.ptrActive) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      const role = roleOf(document.elementFromPoint(t.clientX, t.clientY));
+      if (!role) continue;
+      e.preventDefault();
+      this.begin(10000 + t.identifier, t.clientX, t.clientY, role);
+    }
+  };
+
+  private onTouchMove = (e: TouchEvent) => {
+    if (this.ptrActive) return;
+    let used = false;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      const p = this.pointers.get(10000 + t.identifier);
+      if (!p || p.role !== "stick" || !this.stickOrigin) continue;
+      used = true;
+      const dx = t.clientX - this.stickOrigin.x;
+      const dy = t.clientY - this.stickOrigin.y;
+      const clamped = radial(dx / 52, dy / 52, 0.12);
+      this.stickX = clamped.x;
+      this.stickY = clamped.y;
+    }
+    if (used) e.preventDefault();
+  };
+
+  private onTouchEnd = (e: TouchEvent) => {
+    if (this.ptrActive) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      this.release(10000 + e.changedTouches[i].identifier);
+    }
+  };
+
+  private release(id: number) {
+    const p = this.pointers.get(id);
+    this.pointers.delete(id);
     if (!p) return;
     if (p.role === "stick") {
       const still = [...this.pointers.values()].some((x) => x.role === "stick");
@@ -128,7 +191,7 @@ export class Input {
     }
     if (p.role === "bomb") this.bombHeld = [...this.pointers.values()].some((x) => x.role === "bomb");
     if (p.role === "det") this.detonateHeld = [...this.pointers.values()].some((x) => x.role === "det");
-  };
+  }
 
   poll(): InputState {
     const keys = this.injected ?? this.keys;
@@ -160,6 +223,9 @@ export class Input {
 
     mx = Math.max(-1, Math.min(1, mx));
     my = Math.max(-1, Math.min(1, my));
+    // Bomberman grid: keep one axis so diagonals don't wedge in walls.
+    if (Math.abs(mx) >= Math.abs(my)) my = 0;
+    else mx = 0;
 
     const bomb = this.bombHeld || keys.has("Space") || padBomb;
     const detonate = this.detonateHeld || keys.has("KeyX") || keys.has("KeyF") || padDet;

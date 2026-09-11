@@ -4,11 +4,17 @@
 
 ## Download APK
 
-**[BombArena-1.0.0.apk](https://github.com/JaguarIF/bomb-arena/releases/latest/download/BombArena-1.0.0.apk)**
+**[BombArena.apk](https://github.com/JaguarIF/bomb-arena/releases/latest/download/BombArena.apk)**
 
-On the phone: open the link → Allow install from this source → Install.
+On the phone:
 
-Android 8+ may ask to allow installs from the browser. The APK is debug-signed (sideload).
+1. Open the link in Chrome
+2. Allow install from this source if Android asks
+3. Install → open **Bomb Arena**
+
+The APK is debug-signed for sideload (not Play Store). Android 7+.
+
+If an older build showed a black screen, install **1.2.0+**.
 
 ## Play
 

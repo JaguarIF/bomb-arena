@@ -23,6 +23,8 @@ import type { HudSnap, MatchResult } from "@/game/types";
 import { useProfile } from "@/store/profile";
 import { cn } from "@/lib/utils";
 
+const APK_URL = "https://github.com/JaguarIF/bomb-arena/releases/latest/download/BombArena.apk";
+
 function useT() {
   const lang = useProfile((s) => s.profile.settings.lang);
   return (k: I18nKey) => t(lang, k);
@@ -149,6 +151,13 @@ function MenuScreen() {
         <Button variant="ghost" onClick={() => setScreen("howto")}>
           {tr("howto")}
         </Button>
+        <a
+          href={APK_URL}
+          className="relative z-[1] inline-flex h-12 w-full items-center justify-center rounded-[var(--radius-md)] border border-border bg-surface text-sm font-medium text-fg select-none touch-manipulation"
+        >
+          {tr("getApp")}
+        </a>
+        <p className="text-center text-xs text-subtle">{tr("getAppHint")}</p>
         <p className="text-center text-xs text-subtle">
           {tr("multiplayer")} — {tr("comingSoon")}
         </p>
@@ -406,37 +415,25 @@ function PlayScreen() {
     engineRef.current = engine;
     const onResize = () => engine.resize();
     window.addEventListener("resize", onResize);
-    void engine.boot().then(() => engine.start());
+    void engine.boot().then(() => engine.start()).catch((err) => {
+      console.error(err);
+    });
+    let raf = 0;
+    const tickKnob = () => {
+      const inp = engineRef.current?.input;
+      if (inp) setKnob({ x: inp.stickX * 32, y: inp.stickY * 32 });
+      raf = requestAnimationFrame(tickKnob);
+    };
+    raf = requestAnimationFrame(tickKnob);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
       engine.destroy();
       engineRef.current = null;
     };
-  }, [match, apply, settings]);
-
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const stick = el.querySelector("[data-role=stick]") as HTMLElement | null;
-    if (!stick) return;
-    const move = (e: PointerEvent) => {
-      const r = stick.getBoundingClientRect();
-      const dx = e.clientX - (r.left + r.width / 2);
-      const dy = e.clientY - (r.top + r.height / 2);
-      const m = Math.min(28, Math.hypot(dx, dy));
-      const a = Math.atan2(dy, dx);
-      setKnob({ x: Math.cos(a) * m, y: Math.sin(a) * m });
-    };
-    const up = () => setKnob({ x: 0, y: 0 });
-    stick.addEventListener("pointermove", move);
-    stick.addEventListener("pointerup", up);
-    stick.addEventListener("pointercancel", up);
-    return () => {
-      stick.removeEventListener("pointermove", move);
-      stick.removeEventListener("pointerup", up);
-      stick.removeEventListener("pointercancel", up);
-    };
-  }, []);
+    // Engine must not remount when HUD re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [match]);
 
   const togglePause = () => {
     const g = engineRef.current;
@@ -500,18 +497,18 @@ function PlayScreen() {
 
       <div ref={wrapRef} className="relative min-h-0 flex-1" style={{ touchAction: "none" }}>
         <canvas ref={canvasRef} className="block h-full w-full" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between px-4 pb-4 pt-6 md:px-8">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between px-5 pb-6 pt-6">
           <div data-role="stick" className="stick-base pointer-events-auto">
             <div className="stick-knob" style={{ transform: `translate(calc(-50% + ${knob.x}px), calc(-50% + ${knob.y}px))` }} />
           </div>
           <div className="flex flex-col items-center gap-3">
             {hud?.remote ? (
-              <button type="button" data-role="det" className="act-btn pointer-events-auto h-14 w-14 cursor-pointer text-xs font-semibold">
+              <button type="button" data-role="det" className="act-btn pointer-events-auto h-16 w-16 cursor-pointer text-xs font-semibold">
                 DET
               </button>
             ) : null}
             <button type="button" data-role="bomb" className="act-btn pointer-events-auto cursor-pointer">
-              <Bomb className="size-7" />
+              <Bomb className="size-8" />
             </button>
           </div>
         </div>
