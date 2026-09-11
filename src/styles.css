@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0c1018;
+  --color-surface: #141924;
+  --color-surface-2: #1b2130;
+  --color-fg: #f3efe6;
+  --color-muted: #9aa3b2;
+  --color-subtle: #6d7583;
+  --color-border: color-mix(in oklab, var(--color-fg) 12%, transparent);
+  --color-ring: #c5ccd6;
+  --color-accent: #c5ccd6;
+  --color-danger: #b5453a;
+  --color-ok: #3f8f6b;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --motion-quick: 150ms;
+  --motion-fast: 250ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+  html,
+  body {
+    margin: 0;
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+  button,
+  [role="button"],
+  a,
+  input,
+  label {
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.arena-root {
+  height: 100%;
+  min-height: 100%;
+  overflow: auto;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #182033 0%, transparent 55%),
+    var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  /* Room for the Grok chrome pill so bottom actions stay tappable */
+  padding-bottom: max(4.75rem, calc(env(safe-area-inset-bottom) + 2.75rem));
+}
+
+.hud-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: color-mix(in oklab, var(--color-bg) 72%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  pointer-events: auto;
+}
+
+.stick-base {
+  width: 118px;
+  height: 118px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in oklab, var(--color-bg) 55%, transparent);
+  position: relative;
+  touch-action: none;
+  pointer-events: auto;
+  z-index: 5;
+}
+
+.stick-knob {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: var(--color-fg);
+  opacity: 0.88;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.act-btn {
+  width: 76px;
+  height: 76px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in oklab, var(--color-fg) 88%, #c5ccd6);
+  color: var(--color-bg);
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+  pointer-events: auto;
+  z-index: 5;
+}
+
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  pointer-events: auto;
+}
+
+.level-cell {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.level-cell[data-locked="true"] {
+  color: var(--color-subtle);
+  background: var(--color-bg);
+  pointer-events: none;
+}
